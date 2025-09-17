@@ -97,4 +97,59 @@ def pack_items(items):
             "width": h,
         })
 
-    placed_id_
+    placed_ids = {p["client"]+str(p["x"])+str(p["y"]) for p in placed}
+    for it in items:
+        if not any(it["client"] in pid for pid in placed_ids):
+            not_placed.append(it)
+
+    return placed, not_placed
+
+# --- Funktsioon: joonis ---
+def plot_trailer(placed, not_placed):
+    fig, ax = plt.subplots(figsize=(12, 3))
+    ax.set_xlim(0, TRAILER_LENGTH)
+    ax.set_ylim(0, TRAILER_WIDTH)
+    ax.set_aspect("equal")
+    ax.set_title("Haagise paigutus", fontsize=14)
+
+    colors = {}
+    cmap = plt.cm.get_cmap("tab20")
+
+    for i, it in enumerate(placed):
+        if it["client"] not in colors:
+            colors[it["client"]] = cmap(len(colors) % 20)
+
+        rect = patches.Rectangle(
+            (it["x"], it["y"]),
+            it["length"], it["width"],
+            linewidth=1, edgecolor="black",
+            facecolor=colors[it["client"]], alpha=0.6
+        )
+        ax.add_patch(rect)
+        ax.text(
+            it["x"] + it["length"]/2,
+            it["y"] + it["width"]/2,
+            f"{it['client']} #{it['order']}",
+            ha="center", va="center", fontsize=7
+        )
+
+    st.pyplot(fig)
+
+    if not_placed:
+        st.warning("Ei mahtunud:")
+        for it in not_placed:
+            st.write(f"- {it['client']} {it['length']}x{it['width']}m")
+
+# --- Streamlit UI ---
+st.title("Haagise koormuse paigutus")
+st.write("Kleebi andmed Google Docsist alla tekstikasti ja vajuta **Paiguta**.")
+
+text = st.text_area("Andmed:", height=200)
+
+if st.button("Paiguta"):
+    items = parse_input(text)
+    if not items:
+        st.error("Andmeid ei tuvastatud!")
+    else:
+        placed, not_placed = pack_items(items)
+        plot_trailer(placed, not_placed)
